@@ -83,8 +83,14 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Committing files..."
 git commit -m "Initial commit: AutoPCR Android Port"
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "git commit failed"
-    exit 1
+    # Check if the error is because there's nothing to commit
+    $commitOutput = git status
+    if ($commitOutput -match "nothing to commit, working tree clean") {
+        Write-Host "No changes to commit, working tree is clean. Skipping commit step."
+    } else {
+        Write-Error "git commit failed"
+        exit 1
+    }
 }
 
 # Push files
