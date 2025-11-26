@@ -95,10 +95,26 @@ if ($LASTEXITCODE -ne 0) {
 
 # Push files
 Write-Host "Pushing files to GitHub..."
-git push -u origin main
+
+# Check current branch name
+$currentBranch = git rev-parse --abbrev-ref HEAD
+Write-Host "Current branch: $currentBranch"
+
+# Try to push with current branch name
+git push -u origin $currentBranch
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "git push failed. Please check your GitHub credentials and network connection."
-    exit 1
+    # If push fails, try with master as fallback
+    if ($currentBranch -ne "master") {
+        Write-Host "Push with $currentBranch failed, trying with master..."
+        git push -u origin master
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "git push failed. Please check your GitHub credentials and network connection."
+            exit 1
+        }
+    } else {
+        Write-Error "git push failed. Please check your GitHub credentials and network connection."
+        exit 1
+    }
 }
 
 Write-Host ""
