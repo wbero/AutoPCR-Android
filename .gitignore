@@ -1,0 +1,108 @@
+# Android Studio 项目忽略规则
+
+# 编译产物
+*.apk
+*.ap_*
+*.dex
+*.class
+*.o
+*.so
+*.lib
+*.a
+*.la
+*.lo
+
+# Gradle 相关
+.gradle/
+build/
+local.properties
+.idea/workspace.xml
+.idea/libraries/
+.idea/modules.xml
+.idea/gradle.xml
+.idea/caches/
+.idea/dictionaries/
+.idea/vcs.xml
+.idea/encodings.xml
+.idea/compiler.xml
+.idea/runConfigurations.xml
+.idea/assetWizardSettings.xml
+.idea/gradle.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Android Studio
+*.iml
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python 相关
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+
+# 日志文件
+*.log
+logs/
+*.trace
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 证书文件
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# 测试报告
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 其他
+*.bak
+*.old
+*.orig
+*.rej
+*.sublime-project
+*.sublime-workspace
+*.vs/
+*.vsix
+
+# 特定于本项目的忽略
+app/release/
+app/build/
