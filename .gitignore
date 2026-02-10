@@ -106,3 +106,8 @@ coverage.xml
 # 特定于本项目的忽略
 app/release/
 app/build/
+.trae/
+publish_release.ps1
+build_and_release.ps1
+gradle/wrapper/
+.gradle-wrapper/
