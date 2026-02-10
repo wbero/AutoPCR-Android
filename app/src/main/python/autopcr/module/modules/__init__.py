@@ -1,5 +1,6 @@
 from dataclasses import field
 from typing import Any
+from .abyss import *
 from .autosweep import *
 from .box import *
 from .nologin import *
@@ -10,6 +11,7 @@ from .daily import *
 from .exequip import *
 from .gacha import *
 from .hatsune import *
+from .mirage import *
 from .room import *
 from .shiori import *
 from .shop import *
@@ -69,6 +71,11 @@ daily_modules = ModuleList(
         special_underground_skip,
         tower_cloister_sweep,
         jjc_reward,
+        special_underground_skip,
+        mirage_floor_receive,
+        mirage_nemesis_sweep,
+        abyss_quest_sweep,
+        abyss_boss_sweep,
         talent_sweep,
         present_receive,
         talent_sweep2,
@@ -81,6 +88,7 @@ daily_modules = ModuleList(
         xinsui3_sweep,
         xinsui2_sweep,
         xinsui1_sweep,
+        starcup3_sweep,
         starcup2_sweep,
         starcup1_sweep, 
         hatsune_h_sweep,
@@ -119,6 +127,7 @@ daily_modules = ModuleList(
         clan_equip_request,
         love_up,
         shiori_mission_check,
+        alces_story_reading,
         main_story_reading,
         tower_story_reading,
         hatsune_story_reading,
@@ -197,6 +206,8 @@ tool_modules = ModuleList(
     '工具',
     'tool',
     [
+        ex_equip_rainbow_enchance,
+        ex_equip_power_maximun,
         find_talent_quest,
         find_clan_talent_quest,
         # return_jewel,

@@ -74,6 +74,23 @@ class AbyssBossDatum(Base):
     difficulty: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
+class AlcesCost(Base):
+    __tablename__ = 'alces_cost'
+
+    count: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[int] = mapped_column(Integer, nullable=False)
+    item_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+
+class AlcesStory(Base):
+    __tablename__ = 'alces_story'
+
+    story_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    reward_group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    story_type: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class AbyssBossDisplayDatum(Base):
     __tablename__ = 'abyss_boss_display_data'
 
@@ -12565,3 +12582,41 @@ class YsnStoryDatum(Base):
     reward_count_1: Mapped[int] = mapped_column(Integer, nullable=False)
     disp_order: Mapped[int] = mapped_column(Integer, nullable=False)
     reward_type_2: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class MirageFloorSetting(Base):
+    __tablename__ = 'mirage_floor_setting'
+
+    quest_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    floor_num: Mapped[int] = mapped_column(Integer, primary_key=True)
+    pool_reward_group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class MirageNemesisArea(Base):
+    __tablename__ = 'mirage_nemesis_area'
+
+    nemesis_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    release_time: Mapped[str] = mapped_column(Text, nullable=False)
+    nemesis_area_name: Mapped[str] = mapped_column(Text, nullable=False)
+    condition_story_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class MirageNemesisQuest(Base):
+    __tablename__ = 'mirage_nemesis_quest'
+
+    wave_group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    nemesis_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    limit_time: Mapped[int] = mapped_column(Integer, nullable=False)
+    drop_reward_group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    clear_reward_group_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    release_time: Mapped[str] = mapped_column(Text, nullable=False)
+    quest_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    area_level: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class MirageSetting(Base):
+    __tablename__ = 'mirage_setting'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    challenge_count_max: Mapped[int] = mapped_column(Integer, nullable=False)
+    pool_reward_accumulate_day_num_max: Mapped[int] = mapped_column(Integer, nullable=False)

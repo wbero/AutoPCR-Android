@@ -4,6 +4,7 @@ from dataclasses_json import dataclass_json
 from ..core import pcrclient
 from ..db.database import db
 from ..util.pcr_data import CHARA_NAME, CHARA_NICKNAME
+from ..model.custom import eDifficulty
 from copy import copy
 
 def _wrap_init(cls, setter):
@@ -275,6 +276,20 @@ class EquipListConfig(MultiSearchConfig):
     def candidate_display(self, equip_id: int):
         return db.get_equip_name(equip_id)
 
+class ExEquipSubStatusConfig(SingleChoiceConfig):
+    def __init__(self, key: str, desc: str):
+        super().__init__(key, desc, 12, db.ex_equip_sub_status_candidate)
+
+    def candidate_display(self, status: int):
+        return UnitAttribute.index2ch[eParamType(status)] if status else "任意"
+
+class ExEquipSubStatusRankConfig(MultiSearchConfig):
+    def __init__(self, key: str, desc: str):
+        super().__init__(key, desc, [12, 13, 2, 4], db.ex_equip_sub_status_candidate)
+
+    def candidate_display(self, status: int):
+        return UnitAttribute.index2ch[eParamType(status)] if status else "任意"
+
 class UnitListConfig(UnitConfigMixin, MultiSearchConfig):
     def __init__(self, key: str, desc: str):
         super().__init__(key, desc, [], db.unlock_unit_condition_candidate, short_display=True)
@@ -400,7 +415,7 @@ class ActiveHatsuneChoiceConfig(SingleChoiceConfig):
 
 class ActiveHatsuneListConfig(MultiChoiceConfig):
     """Configuration for active Hatsune list."""
-    
+
     def __init__(self, key: str, desc: str, default: List):
         super().__init__(key, desc, default, db.get_active_hatsune_id)
 
@@ -415,6 +430,15 @@ class ActiveHatsuneListConfig(MultiChoiceConfig):
                 v = event_id
             ret.append(v)
         return ret
+
+class AbyssBossConfig(SingleChoiceConfig):
+    """Configuration for abyss boss difficulty."""
+
+    def __init__(self, key: str, desc: str, default: int):
+        super().__init__(key, desc, default, [eDifficulty.NONE, eDifficulty.NORMAL, eDifficulty.HARD, eDifficulty.VERY_HARD, eDifficulty.EXTREME])
+
+    def candidate_display(self, difficulty: int):
+        return (eDifficulty)(difficulty).name
 
 class TalentConfig(MultiChoiceConfig):
     """Configuration for talent quests."""

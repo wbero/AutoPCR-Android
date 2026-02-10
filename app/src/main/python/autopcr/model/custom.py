@@ -7,6 +7,7 @@ from collections import Counter
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, ROUND_HALF_UP
+from enum import IntEnum
 
 ItemType = Tuple[eInventoryType, int]
 
@@ -201,3 +202,10 @@ class ArenaQueryResponse(BaseModel):
 class TalentQuestData(BaseModel):
     talent_id: int = None
     clear_count: int = None
+
+class eDifficulty(IntEnum):
+    NONE = 0
+    NORMAL = 1
+    HARD = 2
+    VERY_HARD = 3
+    EXTREME = 4

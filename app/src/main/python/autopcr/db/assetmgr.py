@@ -96,9 +96,21 @@ class assetmgr:
         return await content.download(genHash)
  
     async def db(self) -> bytes:
+        logger.info("开始从 Unity 资源文件提取数据库...")
         UnityPy.config.FALLBACK_UNITY_VERSION = "2021.3.20f1"
-        ab = UnityPy.load(await self.download('a/masterdata_master.unity3d'))
+
+        logger.info("下载 a/masterdata_master.unity3d...")
+        data = await self.download('a/masterdata_master.unity3d')
+        logger.info(f"下载完成，大小: {len(data)} bytes")
+
+        logger.info("使用 UnityPy 加载资源...")
+        ab = UnityPy.load(data)
+        logger.info(f"资源对象数量: {len(ab.objects)}")
+
+        logger.info("读取第一个对象...")
         asset = ab.objects[0].read()
+        logger.info(f"脚本大小: {len(asset.script)} bytes")
+
         return asset.script
 
 

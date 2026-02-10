@@ -65,10 +65,17 @@ class UnlockRarity6Slot(BaseModel):
     Status1: int = None
     Status2: int = None
     Status3: int = None
+class ExtraEquipSubStatus(BaseModel):
+    slot_number: int = None
+    status: int = None
+    step: int = None
+    is_lock: bool = None
 class ExtraEquipSlot(BaseModel):
     serial_id: int = None
     ex_equipment_id: int = None
     enhancement_pt: int = None
+    sub_status: List[ExtraEquipSubStatus] = None
+    alces_flag: int = None
 class UnitData(BaseModel):
     id: int = None
     get_time: int = None
@@ -212,7 +219,7 @@ class VersusResult(BaseModel):
     win_or_lose: int = None
     opponent_user: OpponentUser = None
 class DeckData(BaseModel):
-    deck_number: ePartyType = None
+    deck_number: int = None  # 改为 int 避免枚举验证错误
     unit_id_1: int = None
     unit_id_2: int = None
     unit_id_3: int = None
@@ -1349,7 +1356,7 @@ class UserChara(BaseModel):
     chara_love: int = None
     love_level: int = None
 class LoadDeckData(BaseModel):
-    deck_number: ePartyType = None
+    deck_number: int = None  # 改为 int 避免枚举验证错误
     unit_id_1: int = None
     unit_id_2: int = None
     unit_id_3: int = None
@@ -2615,6 +2622,15 @@ class AcnUnlockQuestMission(BaseModel):
 class AcnUnknownEnemyUnit(BaseModel):
     unit_id: int = None
     current_hp: int = None
+class AlcesData(BaseModel):
+    serial_id: int = None
+    sub_status: List[ExtraEquipSubStatus] = None
+class ExtraEquipSubStatusPost(BaseModel):
+    slot_number: int = None
+    is_lock: int = None
+class AlcesDataPost(BaseModel):
+    serial_id: int = None
+    sub_status: List[ExtraEquipSubStatusPost] = None
 class ArenaDefendInfo(BaseModel):
     round_max_limited_times: int = None
     daily_max_limited_times: int = None
@@ -2890,6 +2906,10 @@ class MonthlyGachaInfo(BaseModel):
     exchange_num: int = None
     max_exchange_num: int = None
     gacha_point_info: GachaPointInfo = None
+class MirageNemesisProgress(BaseModel):
+    nemesis_id: int = None
+    area_level: int = None
+    periodic_clear_count: int = None
 class TotalScoreList(BaseModel):
     nbb_chara_type: int = None
     total_score: int = None

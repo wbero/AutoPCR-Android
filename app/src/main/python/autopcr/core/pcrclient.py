@@ -59,6 +59,69 @@ class pcrclient(apiclient):
         req.current_clan_battle_coin = self.data.get_shop_gold(eSystemId.CLAN_BATTLE_SHOP)
         return await self.request(req)
 
+    async def alces_top(self):
+        if not self.data.is_quest_cleared(11018002):
+            raise SkipError("究极炼成未解锁")
+        req = AlcesTopRequest()
+        return await self.request(req)
+
+    async def alces_receive_tutorial_item(self):
+        req = AlcesReceiveTutorialItemRequest()
+        return await self.request(req)
+
+    async def alces_read_story(self, story_id: int):
+        req = AlcesReadStoryRequest()
+        req.story_id = story_id
+        return await self.request(req)
+
+    async def alces_exec(self, serial_id: int):
+        req = AlcesExecRequest()
+        req.serial_id = serial_id
+        req.current_alces_point = self.data.get_inventory((eInventoryType.Item, 26202))
+        req.current_gold = self.data.get_mana()
+        return await self.request(req)
+
+    async def alces_lock_slot(self, serial_id: int, slot_number: int, is_lock: int):
+        req = AlcesLockSlotRequest()
+        req.lock_list = [
+            AlcesDataPost(
+                serial_id=serial_id,
+                sub_status=[ExtraEquipSubStatusPost(
+                    slot_number=slot_number,
+                    is_lock=is_lock
+                )]
+            )
+        ]
+        return await self.request(req)
+
+    async def alces_cancel_result(self, serial_id: int):
+        req = AlcesCancelResultRequest()
+        req.serial_id = serial_id
+        return await self.request(req)
+
+    async def alces_fix_result(self, serial_id: int):
+        req = AlcesFixResultRequest()
+        req.serial_id = serial_id
+        return await self.request(req)
+
+    async def mirage_top(self):
+        if not self.data.is_quest_cleared(11072001):
+            raise SkipError("追忆战未解锁")
+        req = MirageTopRequest()
+        return await self.request(req)
+
+    async def mirage_receive_reward(self, from_system_id: int):
+        req = MirageReceiveRewardRequest()
+        req.from_system_id = from_system_id
+        return await self.request(req)
+
+    async def mirage_nemesis_skip_multiple(self, skip_list: List[QuestSkipInfo]):
+        req = MirageNemesisSkipMultipleRequest()
+        req.skip_list = skip_list
+        req.current_skip_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        req.exec_type = 2
+        return await self.request(req)
+
     async def emblem_top(self):
         req = EmblemTopRequest()
         return await self.request(req)
@@ -119,6 +182,14 @@ class pcrclient(apiclient):
         req.block_id = block_id
         req.dish_list = dish_list
         req.surplus_dish_list = surplus_dish_list
+        return await self.request(req)
+
+    async def caravan_shortcut_choice(self, season_id: int, block_id: int, is_open: int, current_currency_num: int):
+        req = CaravanShortcutChoiceRequest()
+        req.season_id = season_id
+        req.block_id = block_id
+        req.is_open = is_open
+        req.current_currency_num = current_currency_num
         return await self.request(req)
 
     async def caravan_spots_choice(self, season_id: int, choice: int):
@@ -1125,6 +1196,30 @@ class pcrclient(apiclient):
         req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
         return await self.request(req)
 
+    async def abyss_top(self, abyss_id: int):
+        req = AbyssTopRequest()
+        req.abyss_id = abyss_id
+        req.is_first = 1
+        return await self.request(req)
+
+    async def abyss_boss_skip(self, abyss_id: int, boss_id: int, enemy_index: int, exec_skip_num: int, current_boss_ticket_num: int):
+        req = AbyssBossSkipRequest()
+        req.abyss_id = abyss_id
+        req.boss_id = boss_id
+        req.enemy_index = enemy_index
+        req.exec_skip_num = exec_skip_num
+        req.current_skip_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        req.current_boss_ticket_num = current_boss_ticket_num
+        return await self.request(req)
+
+    async def abyss_quest_skip(self, quest_id: int, times: int):
+        req = AbyssQuestSkipMultipleRequest()
+        req.abyss_id = db.quest_info[quest_id].abyss_id
+        req.skip_list = [QuestSkipInfo(quest_id=quest_id, skip_count=times)]
+        req.current_ticket_num = self.data.get_inventory((eInventoryType.Item, 23001))
+        req.exec_type = 1 # for single 2 for multiple
+        return await self.request(req)
+
     async def equip_get_request(self, message_id: int):
         req = EquipGetRequestRequest()
         req.clan_id = self.data.clan
@@ -1366,7 +1461,7 @@ class pcrclient(apiclient):
             (quest in db.tower_quest and self.data.tower_status and self.data.tower_status.cleared_floor_num >= db.tower_quest[quest].floor_num)
         )
 
-    async def quest_skip_aware(self, quest: int, times: int, recover: bool = False, is_total: bool = False):
+    async def quest_skip_aware(self, quest: int, times: int, recover: bool = False, is_total: bool = False) -> Tuple[List[InventoryInfo], int, bool]:
         name = db.get_quest_name(quest)
         if db.is_hatsune_quest(quest):
             if not quest in db.quest_to_event:
@@ -1390,6 +1485,14 @@ class pcrclient(apiclient):
                 daily_clear_count = 0,
                 daily_recovery_count = 0,
             ))
+        elif db.is_abyss_quest(quest):
+            if quest not in self.data.cleared_abyss_quests:
+                raise AbortError(f"任务{name}未通关或不存在")
+            qinfo = self.data.abyss_quest_info.get(quest, AbyssDailyClearCountList(
+                quest_id = quest,
+                daily_clear_count = 0,
+            ))
+            qinfo.__dict__['daily_recovery_count'] = 0
         else:
             if not quest in self.data.quest_dict:
                 raise AbortError(f"任务{name}未通关或不存在")
@@ -1401,26 +1504,47 @@ class pcrclient(apiclient):
         info = db.quest_info[quest]
         if db.is_talent_quest(quest): # fix
             setattr(info, 'daily_limit', self.data.settings.talent_quest.daily_clear_limit_count)
+        elif db.is_abyss_quest(quest):
+            setattr(info, 'daily_limit', self.data.settings.abyss.daily_clear_limit_count)
 
         stamina_coefficient = self.data.get_quest_stamina_half_campaign_times(quest)
         if not stamina_coefficient: stamina_coefficient = 100
         result: List[InventoryInfo] = []
-        async def skip(times):
+        clear_count = 0
+        async def skip(times) -> Tuple[bool, List[InventoryInfo]]:
             while self.data.stamina < int(math.floor((info.stamina * (stamina_coefficient / 100)))) * times:
                 if self.stamina_recover_cnt > self.data.recover_stamina_exec_count:
                     await self.recover_stamina()
                 else:
-                    raise AbortError(f"任务{name}体力不足")
+                    return True, []
             if db.is_shiori_quest(quest):
                 event = db.quest_to_event[quest].event_id
-                return await self.shiori_quest_skip(event, quest, times)
+                resp = await self.shiori_quest_skip(event, quest, times)
             elif db.is_hatsune_quest(quest):
                 event = db.quest_to_event[quest].event_id
-                return await self.hatsune_quest_skip(event, quest, times)
+                resp = await self.hatsune_quest_skip(event, quest, times)
             elif db.is_talent_quest(quest):
-                return await self.talent_quest_skip(quest, times)
+                resp = await self.talent_quest_skip(quest, times)
+            elif db.is_abyss_quest(quest):
+                resp = await self.abyss_quest_skip(quest, times)
             else:
-                return await self.quest_skip(quest, times)
+                resp = await self.quest_skip(quest, times)
+
+            nonlocal clear_count
+            clear_count += times
+            result = []
+            if resp.quest_result_list:
+                for result_list in resp.quest_result_list:
+                    if hasattr(result_list, 'quest_result'):
+                        for quest_result in result_list.quest_result:
+                            result = result + quest_result.reward_list
+                    else:
+                        result = result + result_list.reward_list
+            if resp.bonus_reward_list:
+                result = result + resp.bonus_reward_list
+            return False, result
+
+        no_stamina = False
         if info.daily_limit:
             if is_total:
                 times -= qinfo.daily_clear_count
@@ -1437,24 +1561,19 @@ class pcrclient(apiclient):
                         await self.recover_challenge(quest)
                     remain = info.daily_limit
                 t = min(times, remain)
-                resp = await skip(t)
-                if resp.quest_result_list:
-                    for result_list in resp.quest_result_list:
-                        result = result + result_list.reward_list
-                if resp.bonus_reward_list:
-                    result = result + resp.bonus_reward_list
-                    
+                no_stamina, resp = await skip(t)
+                if no_stamina:
+                    break
+
+                result = result + resp
+
                 times -= t
                 remain -= t
         else:
-            resp = await skip(times)
-            if resp.quest_result_list:
-                for result_list in resp.quest_result_list:
-                    result = result + result_list.reward_list
-            if resp.bonus_reward_list:
-                result = result + resp.bonus_reward_list
+            no_stamina, resp = await skip(times)
+            result = result + resp
 
-        return result
+        return result, clear_count, no_stamina
 
     async def refresh(self):
         req = HomeIndexRequest()

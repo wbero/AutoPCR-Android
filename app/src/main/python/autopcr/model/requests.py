@@ -1752,6 +1752,22 @@ class MirokuBattleUpdateDeckRequest(Request[MirokuBattleUpdateDeckResponse]):
     @property
     def url(self) -> str:
         return "miroku_battle/update_deck"
+class MirageNemesisSkipMultipleRequest(Request[MirageNemesisSkipMultipleResponse]):
+    skip_list: List[QuestSkipInfo] = None
+    current_skip_ticket_num: int = None
+    exec_type: int = None
+    @property
+    def url(self) -> str:
+        return "mirage/nemesis_skip_multiple"
+class MirageReceiveRewardRequest(Request[MirageReceiveRewardResponse]):
+    from_system_id: int = None
+    @property
+    def url(self) -> str:
+        return "mirage/receive_reward"
+class MirageTopRequest(Request[MirageTopResponse]):
+    @property
+    def url(self) -> str:
+        return "mirage/top"
 class MissionAcceptRequest(Request[MissionAcceptResponse]):
     type: int = None
     id: int = None
@@ -3781,6 +3797,41 @@ class AbyssTopRequest(Request[AbyssTopResponse]):
     @property
     def url(self) -> str:
         return "abyss/top"
+class AlcesCancelResultRequest(Request[AlcesCancelResultResponse]):
+    serial_id: int = None
+    @property
+    def url(self) -> str:
+        return "alces/cancel_result"
+class AlcesExecRequest(Request[AlcesExecResponse]):
+    serial_id: int = None
+    current_alces_point: int = None
+    current_gold: int = None
+    @property
+    def url(self) -> str:
+        return "alces/exec"
+class AlcesFixResultRequest(Request[AlcesFixResultResponse]):
+    serial_id: int = None
+    @property
+    def url(self) -> str:
+        return "alces/fix_result"
+class AlcesLockSlotRequest(Request[AlcesLockSlotResponse]):
+    lock_list: List[AlcesDataPost] = None
+    @property
+    def url(self) -> str:
+        return "alces/lock_slot"
+class AlcesReadStoryRequest(Request[AlcesReadStoryResponse]):
+    story_id: int = None
+    @property
+    def url(self) -> str:
+        return "alces/read_story"
+class AlcesReceiveTutorialItemRequest(Request[AlcesReceiveTutorialItemResponse]):
+    @property
+    def url(self) -> str:
+        return "alces/receive_tutorial_item"
+class AlcesTopRequest(Request[AlcesTopResponse]):
+    @property
+    def url(self) -> str:
+        return "alces/top"
 class AcnBattleRetireRequest(Request[AcnBattleRetireResponse]):
     quest_id: int = None
     difficulty: int = None

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库更新 - AutoPCR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+        .version-label {
+            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .version-value {
+            color: #495057;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .version-value.loading {
+            color: #adb5bd;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background: #e9ecef;
+            border-color: #ced4da;
+        }
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+        }
+        .progress-container.active {
+            display: block;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        .progress-text {
+            color: #6c757d;
+            font-size: 13px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            display: none;
+            text-align: left;
+        }
+        .status.success {
+            background: #d1e7dd;
+            color: #0f5132;
+            display: block;
+            border: 1px solid #badbcc;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #842029;
+            display: block;
+            border: 1px solid #f5c2c7;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #664d03;
+            display: block;
+            border: 1px solid #ffecb5;
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .redirect-notice {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            color: #0066cc;
+            font-size: 13px;
+            display: none;
+        }
+        .redirect-notice.active {
+            display: block;
+        }
+        .back-link {
+            margin-top: 20px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .back-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(17, 153, 142, 0.5);
+            background: linear-gradient(135deg, #0d8578 0%, #2dd46a 100%);
+        }
+        .back-link:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(17, 153, 142, 0.4);
+        }
+        .divider {
+            height: 1px;
+            background: #e9ecef;
+            margin: 20px 0;
+        }
+        .note {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🗄️</div>
+        <h1>数据库更新</h1>
+        <p class="subtitle">首次启动请先更新数据库以获取最新游戏数据</p>
+        
+        <div class="info-box">
+            <div class="version-label">当前数据库版本</div>
+            <div class="version-value" id="currentVersion">
+                <span class="loading">加载中...</span>
+            </div>
+        </div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">准备更新...</div>
+        </div>
+        
+        <button class="btn btn-primary" id="updateBtn" onclick="updateDatabase()">
+            <span>🔄</span>
+            <span>检查并更新数据库</span>
+        </button>
+        
+        <button class="btn btn-secondary" id="refreshBtn" onclick="refreshVersion()">
+            <span>🔄</span>
+            <span>刷新版本信息</span>
+        </button>
+        
+        <div class="divider"></div>
+        
+        <a href="/daily/login" class="back-link" onclick="skipUpdate()">
+            <span>🚀</span>
+            <span>服务器已更新，直接进入登录</span>
+        </a>
+        
+        <div class="status" id="status"></div>
+        
+        <div class="redirect-notice" id="redirectNotice">
+            <span>⏱️</span>
+            <span id="redirectText">更新成功！正在进入登录页面...</span>
+        </div>
+        
+        <div class="note">
+            💡 提示：如果游戏功能无法正常使用，请尝试更新数据库
+        </div>
+    </div>
+
+    <script>
+        let redirectTimer = null;
+        let isInAndroidApp = false;
+        
+        // 检测是否在 Android WebView 中
+        function detectAndroidApp() {
+            try {
+                // 检查 Android 接口是否存在
+                if (typeof Android !== 'undefined' && Android !== null) {
+                    isInAndroidApp = true;
+                    console.log('检测到 Android 应用环境');
+                }
+            } catch (e) {
+                isInAndroidApp = false;
+                console.log('在浏览器环境中运行');
+            }
+        }
+        
+        // 页面加载时获取版本
+        window.onload = function() {
+            detectAndroidApp();
+            refreshVersion();
+        };
+
+        // 获取当前数据库版本
+        async function refreshVersion() {
+            const versionEl = document.getElementById('currentVersion');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            versionEl.innerHTML = '<span class="loading">加载中...</span>';
+            refreshBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/db/version');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const version = data.version || 0;
+                    versionEl.textContent = version === 0 ? '未初始化' : version;
+                    versionEl.classList.remove('loading');
+                } else {
+                    versionEl.innerHTML = '<span style="color: #dc3545;">获取失败</span>';
+                    showStatus('获取版本失败: ' + (data.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                versionEl.innerHTML = '<span style="color: #dc3545;">获取失败</span>';
+                showStatus('网络错误: ' + e.message, 'error');
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        // 更新数据库
+        async function updateDatabase() {
+            const updateBtn = document.getElementById('updateBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            // 清除之前的重定向定时器
+            if (redirectTimer) {
+                clearTimeout(redirectTimer);
+                redirectTimer = null;
+            }
+            
+            // 隐藏重定向提示
+            document.getElementById('redirectNotice').classList.remove('active');
+            
+            updateBtn.disabled = true;
+            refreshBtn.disabled = true;
+            progressContainer.classList.add('active');
+            hideStatus();
+            
+            // 模拟进度
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    progressFill.style.width = progress + '%';
+                }
+            }, 500);
+            
+            try {
+                progressText.textContent = '正在从服务器下载最新数据库...';
+                
+                const response = await fetch('/db/update', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+                
+                if (response.ok) {
+                    progressText.textContent = '更新完成！';
+                    showStatus('✅ ' + data.message, 'success');
+                    document.getElementById('currentVersion').textContent = data.version;
+                    
+                    // 显示重定向提示
+                    const redirectNotice = document.getElementById('redirectNotice');
+                    redirectNotice.classList.add('active');
+                    
+                    // 如果在 Android 应用中，通知原生层跳转
+                    if (isInAndroidApp) {
+                        try {
+                            Android.onDbUpdateComplete();
+                        } catch (e) {
+                            console.log('调用 Android 接口失败:', e);
+                            // 失败后使用网页跳转
+                            setTimeout(() => {
+                                window.location.href = '/daily/login';
+                            }, 1500);
+                        }
+                    } else {
+                        // 在浏览器中，使用网页跳转
+                        setTimeout(() => {
+                            window.location.href = '/daily/login';
+                        }, 1500);
+                    }
+                    
+                } else {
+                    progressText.textContent = '更新失败';
+                    showStatus('❌ 更新失败: ' + (data.error || '未知错误'), 'error');
+                    
+                    // 如果在 Android 应用中，通知原生层更新失败
+                    if (isInAndroidApp) {
+                        try {
+                            Android.onDbUpdateError(data.error || '未知错误');
+                        } catch (e) {
+                            console.log('调用 Android 错误接口失败:', e);
+                        }
+                    }
+                }
+            } catch (e) {
+                clearInterval(progressInterval);
+                progressText.textContent = '更新失败';
+                showStatus('❌ 网络错误: ' + e.message, 'error');
+                
+                // 如果在 Android 应用中，通知原生层更新失败
+                if (isInAndroidApp) {
+                    try {
+                        Android.onDbUpdateError(e.message);
+                    } catch (err) {
+                        console.log('调用 Android 错误接口失败:', err);
+                    }
+                }
+            } finally {
+                updateBtn.disabled = false;
+                refreshBtn.disabled = false;
+                
+                // 3秒后隐藏进度条
+                setTimeout(() => {
+                    if (!redirectTimer) {
+                        progressContainer.classList.remove('active');
+                        progressFill.style.width = '0%';
+                    }
+                }, 3000);
+            }
+        }
+
+        // 跳过更新
+        function skipUpdate() {
+            if (isInAndroidApp) {
+                try {
+                    Android.onDbUpdateComplete();
+                    return false; // 阻止默认跳转，由 Android 控制
+                } catch (e) {
+                    console.log('调用 Android 接口失败:', e);
+                    return true; // 允许默认跳转
+                }
+            }
+            return true;
+        }
+
+        // 显示状态信息
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = message;
+            statusEl.className = 'status ' + type;
+        }
+
+        // 隐藏状态信息
+        function hideStatus() {
+            const statusEl = document.getElementById('status');
+            statusEl.className = 'status';
+            statusEl.innerHTML = '';
+        }
+    </script>
+</body>
+</html>

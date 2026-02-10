@@ -1,8 +1,8 @@
 from typing import List, Dict, Set, Tuple, Union
 import typing
-from ..model.enums import eCampaignCategory
-from ..model.common import UnitData, eInventoryType, RoomUserItem, InventoryInfo
-from ..model.custom import ItemType
+from ..model.enums import eCampaignCategory, eParamType
+from ..model.common import ExtraEquipInfo, ExtraEquipSubStatus, UnitData, eInventoryType, RoomUserItem, InventoryInfo
+from ..model.custom import ItemType, eDifficulty
 import datetime
 from collections import Counter, defaultdict
 from .dbmgr import dbmgr
@@ -14,6 +14,7 @@ from .constdata import extra_drops
 from ..core.apiclient import apiclient
 from typing import TypeVar, Generic
 from ..util.pcr_data import CHARA_NICKNAME
+from ..util.logger import instance as logger
 
 T = TypeVar("T")
 
@@ -36,7 +37,13 @@ class lazy_property(Generic[T]):
         cached_version = getattr(instance, self.version_attr, None)
 
         if cached is None or current_version != cached_version:
-            value = self.func(instance)  # 现在函数里自己处理 db
+            try:
+                value = self.func(instance)  # 现在函数里自己处理 db
+            except Exception as e:
+                # 处理数据库表缺失的情况
+                import logging
+                logging.warning(f"Database table error in {self.func.__name__}: {e}")
+                value = {}
             setattr(instance, self.attr_name, value)
             setattr(instance, self.version_attr, current_version)
             return value
@@ -54,6 +61,7 @@ class database():
     gacha_single_ticket: ItemType = (eInventoryType.Item, 24001)
     gacha_ten_tickets: List[ItemType] = [(eInventoryType.Item, 24002), (eInventoryType.Item, 24004)]
     dice: ItemType = (eInventoryType.Item, 99009)
+    licheng_point: ItemType = (eInventoryType.CaravanItem, 99007)
     ex_pt: ItemType = (eInventoryType.Item, 26201)
     xinyou: ItemType = (eInventoryType.Item, 25021)
     master_fragment: ItemType = (eInventoryType.Item, 25101)
@@ -63,6 +71,7 @@ class database():
     wind_ball: ItemType = (eInventoryType.Item, 25013)
     sun_ball: ItemType = (eInventoryType.Item, 25014)
     dark_ball: ItemType = (eInventoryType.Item, 25015)
+    ex_rainbow_enhance_pt: ItemType = (eInventoryType.Item, 26202)
 
     def update(self, dbmgr):
         self.dbmgr = dbmgr
@@ -1774,6 +1783,9 @@ class database():
         top = quest_id // 1000000
         return top >= 81 and top <= 85
 
+    def is_abyss_quest(self, quest_id: int) -> bool:
+        return quest_id // 1000000 == 92
+
     def is_hatsune_normal_quest(self, quest_id: int) -> bool:
         return self.is_hatsune_quest(quest_id) and (quest_id // 100) % 10 == 1
 
@@ -1859,6 +1871,17 @@ class database():
         now = apiclient.datetime
         return flow(self.hatsune_schedule.values()) \
                 .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.close_time)) \
+                .to_list()
+
+    def get_active_abyss(self) -> List[AbyssSchedule]:
+        now = apiclient.datetime
+        return flow(self.abyss_schedule.values()) \
+                .where(lambda x: now >= self.parse_time(x.start_time) and now <= self.parse_time(x.end_time)) \
+                .to_list()
+
+    def get_abyss_bosses(self, abyss_id: int) -> List[AbyssBossDatum]:
+        return flow(self.abyss_boss_data.values()) \
+                .where(lambda x: x.abyss_id == abyss_id) \
                 .to_list()
 
     def get_active_seasonpass(self) -> List[SeasonpassFoundation]:
@@ -2204,9 +2227,16 @@ class database():
     def get_talent_id_from_quest_id(self, quest: int) -> int:
         if not self.is_talent_quest(quest):
             return 0
-        area_id = db.quest_info[quest].area_id
-        talent_id = db.talent_quest_area_data[area_id].talent_id
-        return talent_id
+        quest_info = db.quest_info.get(quest)
+        if quest_info is None:
+            logger.warning(f"任务 {quest} 在 quest_info 中不存在")
+            return 0
+        area_id = quest_info.area_id
+        area_data = db.talent_quest_area_data.get(area_id)
+        if area_data is None:
+            logger.warning(f"天赋区域 {area_id} 在 talent_quest_area_data 中不存在")
+            return 0
+        return area_data.talent_id
 
     def equip_candidate(self) -> List[int]:
         return [p for p in self.equip_data if self.is_equip((eInventoryType.Equip, p))]
@@ -2385,6 +2415,66 @@ class database():
             return []
         free_gacha_campaign = min(free_gacha_campaigns)
         return [gacha.gacha_id for gacha in self.campaign_free_gacha_data[free_gacha_campaign]]
+
+    def ex_equip_sub_status_candidate(self) -> List[int]:
+        ids = list(set(j.status for i in self.ex_equipment_sub_status.values() for j in i.values()))
+        ids.append(0)
+        return sorted(ids)
+
+    @lazy_property
+    def mirage_setting(self) -> Dict[int, MirageSetting]:
+        with self.dbmgr.session() as db:
+            return (
+                MirageSetting.query(db)
+                .to_dict(lambda x: x.id, lambda x: x)
+            )
+
+    @lazy_property
+    def mirage_nemesis_quest(self) -> Dict[int, Dict[int, MirageNemesisQuest]]:
+        with self.dbmgr.session() as db:
+            return (
+                MirageNemesisQuest.query(db)
+                .group_by(lambda x: x.nemesis_id)
+                .to_dict(lambda x: x.key, lambda x: x.to_dict(
+                    lambda x: x.area_level, lambda x: x
+                ))
+            )
+
+    @lazy_property
+    def mirage_floor_setting(self) -> Dict[int, MirageFloorSetting]:
+        with self.dbmgr.session() as db:
+            return (
+                MirageFloorSetting.query(db)
+                .to_dict(lambda x: x.floor_num, lambda x: x)
+            )
+
+    @lazy_property
+    def mirage_nemesis_area(self) -> Dict[int, MirageNemesisArea]:
+        with self.dbmgr.session() as db:
+            return (
+                MirageNemesisArea.query(db)
+                .to_dict(lambda x: x.nemesis_id, lambda x: x)
+            )
+
+    @lazy_property
+    def alces_story(self) -> Dict[int, AlcesStory]:
+        with self.dbmgr.session() as db:
+            return (
+                AlcesStory.query(db)
+                .to_dict(lambda x: x.story_id, lambda x: x)
+            )
+
+    @lazy_property
+    def alces_cost(self) -> Dict[ItemType, AlcesCost]:
+        with self.dbmgr.session() as db:
+            return (
+                AlcesCost.query(db)
+                .to_dict(lambda x: (x.type, x.item_id), lambda x: x)
+            )
+
+    def get_mirage_setting(self) -> MirageSetting:
+        max_id = max(self.mirage_setting.keys(), default=1)
+        return self.mirage_setting[max_id]
 
 
 db = database()

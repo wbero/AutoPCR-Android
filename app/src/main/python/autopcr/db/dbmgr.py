@@ -1,4 +1,4 @@
-import os, json
+import os, json, time
 from typing import List
 from ..constants import CACHE_DIR, DATA_DIR
 from .assetmgr import assetmgr
@@ -14,15 +14,69 @@ class dbmgr:
 
     async def update_db(self, mgr: assetmgr):
         ver = mgr.ver
+        logger.info(f"dbmgr.update_db called, target version: {ver}")
+        start_time = time.time()
+
         self._dbpath = os.path.join(CACHE_DIR, 'db', f'{ver}.db')
+        logger.info(f"数据库路径: {self._dbpath}")
+
         if not os.path.exists(self._dbpath):
+            logger.info("数据库文件不存在，从 assetmgr 获取...")
             data = await mgr.db()
+            logger.info(f"获取到数据，大小: {len(data)} bytes")
             with open(self._dbpath, 'wb') as f:
                 f.write(data)
-            logger.info(f'db version {ver} updated')
+            logger.info(f'数据库文件已保存: {self._dbpath}')
+        else:
+            logger.info(f"数据库文件已存在: {self._dbpath}")
+
+        logger.info("创建 SQLAlchemy 引擎...")
         self._engine = create_engine(f'sqlite:///{self._dbpath}')
         self.ver = ver
+        logger.info(f"引擎创建完成，版本设置为: {ver}")
+
+        logger.info("开始执行 unhash...")
+        unhash_start = time.time()
         self.unhash()
+        unhash_time = time.time() - unhash_start
+        logger.info(f"unhash 完成，耗时: {unhash_time:.2f}秒")
+
+        # 检查关键表是否存在
+        logger.info("检查数据库表完整性...")
+        self._check_tables()
+
+        total_time = time.time() - start_time
+        logger.info(f'dbmgr.update_db 完成，总耗时: {total_time:.2f}秒')
+
+    def _check_tables(self):
+        """检查关键数据库表是否存在"""
+        critical_tables = [
+            'quest_data',
+            'unit_data',
+            'item_data',
+            'clan_battle_period',
+            'talent',
+            'unlock_unit_condition'
+        ]
+
+        with self.session() as session:
+            missing_tables = []
+            for table in critical_tables:
+                result = session.execute(
+                    text(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+                ).fetchone()
+                if not result:
+                    missing_tables.append(table)
+                    logger.warning(f"关键表缺失: {table}")
+                else:
+                    # 统计表中的行数
+                    count = session.execute(text(f"SELECT COUNT(*) FROM {table}")).fetchone()[0]
+                    logger.info(f"表 {table}: {count} 行")
+
+            if missing_tables:
+                logger.error(f"数据库缺少 {len(missing_tables)} 个关键表: {', '.join(missing_tables)}")
+            else:
+                logger.info("所有关键表检查通过")
 
     def session(self) -> Session:
         return Session(self._engine)

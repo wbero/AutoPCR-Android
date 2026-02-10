@@ -6,12 +6,13 @@ from typing import Callable, Set, Dict, Tuple, Union
 import typing
 from ..model.common import *
 from ..model.custom import ItemType
-import json, base64, gzip
+import json, base64, gzip, time
 from ..db.assetmgr import instance as assetmgr
 from ..db.dbmgr import instance as dbmgr
 from ..db.database import db
 from ..db.models import ItemDatum, TrainingQuestDatum
 from ..util.linq import flow
+from ..util.logger import instance as logger
 from asyncio import Lock
 
 _data_lck = Lock()
@@ -69,12 +70,29 @@ class datamgr(BaseModel, Component[apiclient]):
 
     @staticmethod
     async def try_update_database(ver: int):
+        logger.info(f"try_update_database called with version: {ver}")
+        start_time = time.time()
         async with _data_lck:
+            logger.info(f"当前 assetmgr.ver: {assetmgr.ver}, dbmgr.ver: {dbmgr.ver}")
+
             if not assetmgr.ver or assetmgr.ver < ver:
+                logger.info(f"需要更新 assetmgr: {assetmgr.ver} -> {ver}")
                 await assetmgr.init(ver)
-            if not dbmgr.ver or dbmgr.ver < assetmgr.ver: 
+                logger.info("assetmgr 更新完成")
+            else:
+                logger.info(f"assetmgr 无需更新，当前版本: {assetmgr.ver}")
+
+            if not dbmgr.ver or dbmgr.ver < assetmgr.ver:
+                logger.info(f"需要更新 dbmgr: {dbmgr.ver} -> {assetmgr.ver}")
                 await dbmgr.update_db(assetmgr)
+                logger.info("dbmgr 更新完成，开始刷新数据库缓存...")
                 db.update(dbmgr)
+                logger.info("数据库缓存刷新完成")
+            else:
+                logger.info(f"dbmgr 无需更新，当前版本: {dbmgr.ver}")
+
+        total_time = time.time() - start_time
+        logger.info(f"try_update_database 完成，总耗时: {total_time:.2f}秒")
 
     def update_stamina_recover(self):
         max_stamina = db.team_info[self.team_level].max_stamina

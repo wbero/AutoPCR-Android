@@ -19,6 +19,8 @@ from ..module.accountmgr import Account, AccountManager, instance as usermgr, Ac
     PermissionLimitedException, UserDisabledException, UserException
 from ..util.draw import instance as drawer
 from ..util.logger import instance as logger
+from ..db.dbstart import do_update_database
+from ..core.datamgr import datamgr
 
 APP_VERSION_MAJOR = 1
 APP_VERSION_MINOR = 6
@@ -577,5 +579,49 @@ data: {ret}\n\n'''
                 return str(e), 500
 
     def run_forever(self, loop):
+        # 注册数据库更新相关路由（在根路径下，避免蓝图前缀）
+        @self.quart.route('/')
+        async def startup_page():
+            """启动页面"""
+            startup_path = os.path.join(self.static_folder, 'startup.html')
+            if os.path.exists(startup_path):
+                with open(startup_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+            else:
+                # 如果启动页面不存在，重定向到登录页面
+                return quart.redirect('/daily/login')
+
+        @self.quart.route('/db_update')
+        async def db_update_page():
+            """数据库更新页面"""
+            db_update_path = os.path.join(self.static_folder, 'db_update.html')
+            if os.path.exists(db_update_path):
+                with open(db_update_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                return content, 200, {'Content-Type': 'text/html; charset=utf-8'}
+            else:
+                return "数据库更新页面未找到", 404
+
+        @self.quart.route('/db/version', methods=['GET'])
+        async def get_database_version():
+            """获取当前数据库版本"""
+            try:
+                from ..db.dbmgr import instance as dbmgr
+                current_ver = dbmgr.ver if dbmgr.ver else 0
+                return {"version": current_ver}, 200
+            except Exception as e:
+                return {"error": f"获取数据库版本失败: {str(e)}"}, 500
+
+        @self.quart.route('/db/update', methods=['POST'])
+        async def update_database():
+            """手动更新数据库"""
+            try:
+                version = await do_update_database()
+                await datamgr.try_update_database(version)
+                return {"message": f"数据库更新成功，版本: {version}", "version": version}, 200
+            except Exception as e:
+                return {"error": f"数据库更新失败: {str(e)}"}, 500
+
         self.quart.register_blueprint(self.app)
         self.quart.run(host=self.host, port=self.port, loop=loop)

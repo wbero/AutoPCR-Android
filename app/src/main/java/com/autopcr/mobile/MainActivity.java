@@ -17,6 +17,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.webkit.JavascriptInterface;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -28,13 +30,16 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private TextView statusText;
     private Button retryButton;
+    private Button updateDbButton;
     
     private static final String SERVER_URL = "http://127.0.0.1:13200/daily/login";
+    private static final String DB_UPDATE_URL = "http://127.0.0.1:13200/db_update";
     private Handler handler = new Handler(Looper.getMainLooper());
     private int retryCount = 0;
     private static final int MAX_RETRIES = 60;
     private boolean isServerReady = false;
     private boolean isErrorOccurred = false;
+    private boolean isDbUpdateCompleted = false;
     private ObjectAnimator logoAnimator;
 
     @Override
@@ -49,8 +54,9 @@ public class MainActivity extends AppCompatActivity {
         // 启动后台服务
         startService(new Intent(this, AutoPCRService.class));
         
+        // 先加载数据库更新页面
         showLoadingState("正在启动 AutoPCR 服务器...");
-        loadPageWithRetry();
+        loadDbUpdatePage();
     }
 
     private void initViews() {
@@ -60,14 +66,22 @@ public class MainActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         statusText = findViewById(R.id.statusText);
         retryButton = findViewById(R.id.retryButton);
+        updateDbButton = findViewById(R.id.updateDbButton);
 
         retryButton.setOnClickListener(v -> {
             retryCount = 0;
             showLoadingState("正在重试连接...");
-            loadPageWithRetry();
+            loadDbUpdatePage();
             if (!logoAnimator.isStarted()) {
                 logoAnimator.start();
             }
+        });
+
+        updateDbButton.setOnClickListener(v -> {
+            // 打开数据库更新页面
+            webView.setVisibility(View.VISIBLE);
+            loadingContainer.setVisibility(View.GONE);
+            webView.loadUrl(DB_UPDATE_URL);
         });
     }
 
@@ -87,6 +101,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setUseWideViewPort(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
+
+        // 添加 JavaScript 接口用于接收数据库更新完成通知
+        webView.addJavascriptInterface(new WebAppInterface(), "Android");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -109,6 +126,11 @@ public class MainActivity extends AppCompatActivity {
                     if (logoAnimator != null) {
                         logoAnimator.cancel();
                     }
+                    
+                    // 如果是数据库更新页面加载完成，显示提示
+                    if (url.contains("/db_update")) {
+                        Toast.makeText(MainActivity.this, "请先更新数据库，完成后将自动跳转到登录页面", Toast.LENGTH_LONG).show();
+                    }
                 }
             }
 
@@ -127,7 +149,11 @@ public class MainActivity extends AppCompatActivity {
                         
                         handler.postDelayed(() -> {
                             if (!isFinishing()) {
-                                webView.loadUrl(SERVER_URL);
+                                if (!isDbUpdateCompleted) {
+                                    webView.loadUrl(DB_UPDATE_URL);
+                                } else {
+                                    webView.loadUrl(SERVER_URL);
+                                }
                             }
                         }, 1000);
                     } else {
@@ -136,6 +162,31 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    // JavaScript 接口类
+    public class WebAppInterface {
+        @JavascriptInterface
+        public void onDbUpdateComplete() {
+            // 数据库更新完成，跳转到登录页面
+            runOnUiThread(() -> {
+                isDbUpdateCompleted = true;
+                Toast.makeText(MainActivity.this, "数据库更新完成，正在进入登录页面...", Toast.LENGTH_SHORT).show();
+                webView.loadUrl(SERVER_URL);
+            });
+        }
+        
+        @JavascriptInterface
+        public void onDbUpdateError(String error) {
+            // 数据库更新出错
+            runOnUiThread(() -> {
+                Toast.makeText(MainActivity.this, "数据库更新失败: " + error, Toast.LENGTH_LONG).show();
+            });
+        }
+    }
+
+    private void loadDbUpdatePage() {
+        webView.loadUrl(DB_UPDATE_URL);
     }
 
     private void loadPageWithRetry() {
@@ -148,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
         statusText.setText(message);
         statusText.setVisibility(View.VISIBLE);
         retryButton.setVisibility(View.GONE);
+        updateDbButton.setVisibility(View.GONE);
         webView.setVisibility(View.GONE); 
     }
 
@@ -157,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
         statusText.setText(message);
         statusText.setVisibility(View.VISIBLE);
         retryButton.setVisibility(View.VISIBLE);
+        updateDbButton.setVisibility(View.VISIBLE);
         webView.setVisibility(View.GONE);
         if (logoAnimator != null) {
             logoAnimator.cancel();

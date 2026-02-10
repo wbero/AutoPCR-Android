@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoPCR - 启动中</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .status-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status-text {
+            color: #495057;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+            animation: loading 2s infinite;
+        }
+        @keyframes loading {
+            0% { width: 0%; margin-left: 0%; }
+            50% { width: 50%; margin-left: 25%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #ced4da;
+        }
+        .note {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .error-box {
+            background: #f8d7da;
+            color: #842029;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .error-box.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚀</div>
+        <h1>AutoPCR</h1>
+        <p class="subtitle">正在启动服务器...</p>
+        
+        <div class="status-box">
+            <div class="status-text" id="statusText">初始化中...</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+        
+        <a href="/db_update" class="btn btn-primary">
+            <span>🗄️</span>
+            <span>更新数据库</span>
+        </a>
+        
+        <a href="/daily/login" class="btn btn-secondary">
+            <span>🔑</span>
+            <span>进入登录页面</span>
+        </a>
+        
+        <div class="error-box" id="errorBox">
+            <span>⚠️</span>
+            <span id="errorText"></span>
+        </div>
+        
+        <div class="note">
+            💡 如果游戏功能无法正常使用，请先更新数据库
+        </div>
+    </div>
+
+    <script>
+        // 检查服务器状态
+        async function checkServerStatus() {
+            const statusText = document.getElementById('statusText');
+            const errorBox = document.getElementById('errorBox');
+            const errorText = document.getElementById('errorText');
+            
+            try {
+                statusText.textContent = '检查数据库状态...';
+                const response = await fetch('/db/version');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.version && data.version > 0) {
+                        statusText.textContent = `数据库已加载 (版本: ${data.version})`;
+                        // 3秒后自动跳转到登录页面
+                        setTimeout(() => {
+                            window.location.href = '/daily/login';
+                        }, 3000);
+                    } else {
+                        statusText.textContent = '数据库未初始化，请更新数据库';
+                        errorBox.classList.add('active');
+                        errorText.textContent = '数据库版本为0，可能需要更新';
+                    }
+                } else {
+                    statusText.textContent = '数据库检查失败';
+                    errorBox.classList.add('active');
+                    errorText.textContent = data.error || '未知错误';
+                }
+            } catch (e) {
+                statusText.textContent = '服务器连接失败';
+                errorBox.classList.add('active');
+                errorText.textContent = '无法连接到服务器: ' + e.message;
+            }
+        }
+        
+        // 页面加载后检查状态
+        window.onload = function() {
+            setTimeout(checkServerStatus, 1000);
+        };
+    </script>
+</body>
+</html>

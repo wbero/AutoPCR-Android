@@ -1369,6 +1369,19 @@ class MirokuBattleTopResponse(ResponseBase):
     missions: List[UserMissionInfo] = None
 class MirokuBattleUpdateDeckResponse(ResponseBase):
     pass
+class MirageNemesisSkipMultipleResponse(ResponseBase):
+    drop_reward_list: List[InventoryInfo] = None
+    add_present_count: int = None
+    upper_limit_flag: bool = None
+class MirageReceiveRewardResponse(ResponseBase):
+    reward_info: List[InventoryInfo] = None
+    add_present_count: int = None
+    upper_limit_flag: bool = None
+class MirageTopResponse(ResponseBase):
+    max_cleared_floor_num: int = None
+    nemesis_progress: List[MirageNemesisProgress] = None
+    reward_full_time: int = None
+    clear_count_reset_time: int = None
 class MissionAcceptResponse(ResponseBase):
     team_level: int = None
     team_exp: int = None
@@ -2804,6 +2817,30 @@ class AbyssTopResponse(ResponseBase):
     daily_clear_count_list: List[AbyssDailyClearCountList] = None
     user_boss_list: List[AbyssUserBoss] = None
     last_login_abyss_id: int = None
+class AlcesCancelResultResponse(ResponseBase):
+    pass
+class AlcesExecResponse(ResponseBase):
+    alces_ex_equip: ExtraEquipInfo = None
+    reward_list: List[InventoryInfo] = None
+    add_present_count: int = None
+    upper_limit_flag: bool = None
+class AlcesFixResultResponse(ResponseBase):
+    pass
+class AlcesLockSlotResponse(ResponseBase):
+    pass
+class AlcesReadStoryResponse(ResponseBase):
+    reward_list: List[InventoryInfo] = None
+    add_present_count: int = None
+    upper_limit_flag: bool = None
+class AlcesReceiveTutorialItemResponse(ResponseBase):
+    alces_ex_equip: List[ExtraEquipInfo] = None
+    reward_list: List[InventoryInfo] = None
+    add_present_count: int = None
+    upper_limit_flag: bool = None
+class AlcesTopResponse(ResponseBase):
+    read_story_id_list: List[int] = None
+    appear_story_id: int = None
+    pending_alces_data: AlcesData = None
 class AcnBattleRetireResponse(ResponseBase):
     pass
 class AcnBossBattleFinishResponse(ResponseBase):

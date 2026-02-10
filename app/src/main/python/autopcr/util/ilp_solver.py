@@ -1,4 +1,5 @@
 from typing import List, Tuple
+import networkx as nx
 from pulp import PULP_CBC_CMD, LpProblem, LpMinimize, LpStatus, LpVariable, lpSum, LpStatusOptimal, LpInteger
 
 def ilp_solver(ub: List[int], target: int, limit: int, effect: List[int]) -> Tuple[bool, List[int]]:
@@ -112,6 +113,26 @@ def memory_use_average_binary_search(items: List[int], target_cnt: int) -> Tuple
     for i in pos:
         ret[i] -= 1
     return True, ret
+
+def ex_equip_power_max_cost_flow(edges: List[Tuple[str, str, int, int]], s: str, t: str) -> Tuple[int, List[Tuple[str, str, int]]]:
+    '''
+    最大流最小费用流求解EX装备战力分配问题
+    :param edges: 边列表，(u, v, capacity, cost)
+    :param n: 节点数量
+    :param source: 源点
+    :param sink: 汇点
+    :return: 最小费用，分配策略列表(u, v, flow)
+    '''
+    G = nx.DiGraph()
+    for edge in edges:
+        u, v, capacity, cost = edge
+        G.add_edge(u, v, capacity=capacity, weight=cost)
+
+    # 求最小费用最大流
+    minCostFlow = nx.max_flow_min_cost(G, s, t)
+    minCost = nx.cost_of_flow(G, minCostFlow)
+    strategy = [(u, v, minCostFlow[u][v]) for u, v in G.edges() if minCostFlow[u][v] > 0]
+    return minCost, strategy
 
 if __name__ == '__main__':
     # ilp_solver([3, 1, 1], 100, 1000, [10, 20, 30])

@@ -10,6 +10,7 @@ from ..core.datamgr import datamgr
 from ..db.database import db
 from .enums import eEventSubStoryStatus
 from typing import Optional
+from ..util.logger import instance as logger
 
 def handles(cls):
     cls.__base__.update = cls.update
@@ -507,7 +508,15 @@ class HomeIndexResponse(responses.HomeIndexResponse):
             mgr.talent_quest_area_info = {
                 v.talent_id: v for v in self.talent_quest_area_info
             }
-            mgr.cleared_talent_quest_ids = {db.get_talent_id_from_quest_id(qid): qid for qid in self.cleared_talent_quest_id_list}
+            # 安全地构建 cleared_talent_quest_ids，跳过无法解析的任务
+            cleared_ids = {}
+            for qid in self.cleared_talent_quest_id_list:
+                talent_id = db.get_talent_id_from_quest_id(qid)
+                if talent_id != 0:
+                    cleared_ids[talent_id] = qid
+                else:
+                    logger.warning(f"无法获取任务 {qid} 的天赋ID，已跳过")
+            mgr.cleared_talent_quest_ids = cleared_ids
 
         mgr.ready = True
 
@@ -708,12 +717,18 @@ class ArenaTimeRewardAcceptResponse(responses.ArenaTimeRewardAcceptResponse):
 @handles
 class DeckUpdateResponse(responses.DeckUpdateResponse):
     async def update(self, mgr: datamgr, request: DeckUpdateRequest):
-        deck = mgr.deck_list[ePartyType(request.deck_number)]
-        deck.unit_id_1 = request.unit_id_1
-        deck.unit_id_2 = request.unit_id_2
-        deck.unit_id_3 = request.unit_id_3
-        deck.unit_id_4 = request.unit_id_4
-        deck.unit_id_5 = request.unit_id_5
+        # 安全地获取 deck，如果 deck_number 不在枚举中则使用原始值
+        try:
+            deck_key = ePartyType(request.deck_number)
+        except ValueError:
+            deck_key = request.deck_number
+        deck = mgr.deck_list.get(deck_key)
+        if deck:
+            deck.unit_id_1 = request.unit_id_1
+            deck.unit_id_2 = request.unit_id_2
+            deck.unit_id_3 = request.unit_id_3
+            deck.unit_id_4 = request.unit_id_4
+            deck.unit_id_5 = request.unit_id_5
 
 @handles
 class SeasonPassRewardAcceptResponse(responses.SeasonPassRewardAcceptResponse):
