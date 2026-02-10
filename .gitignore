@@ -111,3 +111,5 @@ publish_release.ps1
 build_and_release.ps1
 gradle/wrapper/
 .gradle-wrapper/
+.qoder/
+app/keystore.properties

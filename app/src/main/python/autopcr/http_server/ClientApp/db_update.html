@@ -371,23 +371,23 @@
                     const redirectNotice = document.getElementById('redirectNotice');
                     redirectNotice.classList.add('active');
                     
-                    // 如果在 Android 应用中，通知原生层跳转
-                    if (isInAndroidApp) {
-                        try {
-                            Android.onDbUpdateComplete();
-                        } catch (e) {
-                            console.log('调用 Android 接口失败:', e);
-                            // 失败后使用网页跳转
-                            setTimeout(() => {
+                    // 延迟后跳转，让用户看到成功提示
+                    setTimeout(() => {
+                        // 如果在 Android 应用中，通知原生层跳转
+                        if (isInAndroidApp) {
+                            try {
+                                console.log('通知 Android 更新完成');
+                                Android.onDbUpdateComplete();
+                            } catch (e) {
+                                console.log('调用 Android 接口失败:', e);
+                                // 失败后使用网页跳转
                                 window.location.href = '/daily/login';
-                            }, 1500);
-                        }
-                    } else {
-                        // 在浏览器中，使用网页跳转
-                        setTimeout(() => {
+                            }
+                        } else {
+                            // 在浏览器中，使用网页跳转
                             window.location.href = '/daily/login';
-                        }, 1500);
-                    }
+                        }
+                    }, 1500);
                     
                 } else {
                     progressText.textContent = '更新失败';
@@ -431,16 +431,23 @@
 
         // 跳过更新
         function skipUpdate() {
+            console.log('跳过更新被点击');
             if (isInAndroidApp) {
                 try {
+                    console.log('通知 Android 跳过更新');
                     Android.onDbUpdateComplete();
                     return false; // 阻止默认跳转，由 Android 控制
                 } catch (e) {
                     console.log('调用 Android 接口失败:', e);
-                    return true; // 允许默认跳转
+                    // 失败后使用网页跳转
+                    window.location.href = '/daily/login';
+                    return false;
                 }
+            } else {
+                // 在浏览器中直接跳转
+                window.location.href = '/daily/login';
+                return false;
             }
-            return true;
         }
 
         // 显示状态信息

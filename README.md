@@ -1,5 +1,9 @@
 # AutoPCR Android 移植版
 
+> ⚠️ **重要声明**
+> 
+> 本项目是基于 tare 的 kimi-2.5 模型进行的移植，**存在大量已知 bug**，由于能力和时间限制，目前无法完全修复。使用前请充分了解相关风险。
+
 这是 [AutoPCR](https://github.com/cc004/autopcr) 项目的 Android 平台移植版本，基于 CC BY-NC-SA 4.0 许可证。
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/wbero/AutoPCR-Android)](https://github.com/wbero/AutoPCR-Android/releases)
@@ -9,7 +13,7 @@
 
 AutoPCR 是一个用于 Princess Connect! Re:Dive 游戏的辅助工具，提供多种功能如角色数据查询、装备计算、公会战管理等。本项目将其移植到 Android 平台，方便移动端用户使用。
 
-**最新版本**: v1.0.1 (2026-02-10) - [下载 APK](https://github.com/wbero/AutoPCR-Android/releases)
+**最新版本**: v1.0.2 (2026-02-10) - [下载 APK](https://github.com/wbero/AutoPCR-Android/releases)
 
 ## 技术栈
 

@@ -40,10 +40,10 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler = new Handler(Looper.getMainLooper());
     private int retryCount = 0;
     private static final int MAX_RETRIES = 60;
-    private boolean isServerReady = false;
     private boolean isErrorOccurred = false;
     private boolean isDbUpdateCompleted = false;
     private boolean shouldShowDbUpdate = true;
+    private boolean isWaitingForDbUpdate = false;
     private ObjectAnimator logoAnimator;
 
     @Override
@@ -66,9 +66,10 @@ public class MainActivity extends AppCompatActivity {
         // 根据是否已更新数据库决定启动页面
         showLoadingState("正在启动 AutoPCR 服务器...");
         if (shouldShowDbUpdate) {
-            loadDbUpdatePage();
+            isWaitingForDbUpdate = true;
+            loadDbUpdatePageWithRetry();
         } else {
-            loadLoginPage();
+            loadLoginPageWithRetry();
         }
     }
 
@@ -84,18 +85,19 @@ public class MainActivity extends AppCompatActivity {
         retryButton.setOnClickListener(v -> {
             retryCount = 0;
             showLoadingState("正在重试连接...");
-            if (shouldShowDbUpdate && !isDbUpdateCompleted) {
-                loadDbUpdatePage();
+            if (isWaitingForDbUpdate) {
+                loadDbUpdatePageWithRetry();
             } else {
-                loadLoginPage();
+                loadLoginPageWithRetry();
             }
-            if (!logoAnimator.isStarted()) {
+            if (logoAnimator != null && !logoAnimator.isStarted()) {
                 logoAnimator.start();
             }
         });
 
         updateDbButton.setOnClickListener(v -> {
             // 打开数据库更新页面
+            isWaitingForDbUpdate = true;
             webView.setVisibility(View.VISIBLE);
             loadingContainer.setVisibility(View.GONE);
             webView.loadUrl(DB_UPDATE_URL);
@@ -126,36 +128,41 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 isErrorOccurred = false;
-                // 只有在加载登录页面且数据库已更新时才隐藏加载界面
-                if (url.contains("/daily/login") && isDbUpdateCompleted) {
-                    // 登录页面加载中，保持当前状态
-                } else if (!isServerReady) {
-                    webView.setVisibility(View.GONE);
-                    loadingContainer.setVisibility(View.VISIBLE);
+                // 页面开始加载时，保持加载界面显示
+                if (loadingContainer.getVisibility() != View.VISIBLE) {
+                    showLoadingState("正在加载页面...");
                 }
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!isErrorOccurred) {
-                    // 成功加载
-                    loadingContainer.setVisibility(View.GONE);
-                    webView.setVisibility(View.VISIBLE);
                     retryCount = 0;
                     if (logoAnimator != null) {
                         logoAnimator.cancel();
                     }
                     
-                    // 如果是数据库更新页面加载完成，显示提示
+                    // 如果是数据库更新页面加载完成
                     if (url.contains("/db_update")) {
-                        isServerReady = true;
+                        // 显示数据库更新页面，隐藏加载界面
+                        loadingContainer.setVisibility(View.GONE);
+                        webView.setVisibility(View.VISIBLE);
                         Toast.makeText(MainActivity.this, "请先更新数据库，完成后将自动跳转到登录页面", Toast.LENGTH_LONG).show();
-                    } else if (url.contains("/daily/login")) {
-                        isServerReady = true;
-                        isDbUpdateCompleted = true;
-                        // 标记数据库已更新
-                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                        prefs.edit().putBoolean(KEY_DB_UPDATED, true).apply();
+                    } 
+                    // 如果是登录页面加载完成
+                    else if (url.contains("/daily/login")) {
+                        if (isDbUpdateCompleted) {
+                            // 数据库已更新，显示登录页面
+                            loadingContainer.setVisibility(View.GONE);
+                            webView.setVisibility(View.VISIBLE);
+                            // 标记数据库已更新
+                            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                            prefs.edit().putBoolean(KEY_DB_UPDATED, true).apply();
+                        } else {
+                            // 数据库未更新，不应该显示登录页，返回数据库更新页
+                            Toast.makeText(MainActivity.this, "请先完成数据库更新", Toast.LENGTH_SHORT).show();
+                            handler.postDelayed(() -> loadDbUpdatePageWithRetry(), 1000);
+                        }
                     }
                 }
             }
@@ -175,10 +182,10 @@ public class MainActivity extends AppCompatActivity {
                         
                         handler.postDelayed(() -> {
                             if (!isFinishing()) {
-                                if (shouldShowDbUpdate && !isDbUpdateCompleted) {
-                                    webView.loadUrl(DB_UPDATE_URL);
+                                if (isWaitingForDbUpdate) {
+                                    loadDbUpdatePageWithRetry();
                                 } else {
-                                    webView.loadUrl(SERVER_URL);
+                                    loadLoginPageWithRetry();
                                 }
                             }
                         }, 1000);
@@ -197,13 +204,13 @@ public class MainActivity extends AppCompatActivity {
             // 数据库更新完成，跳转到登录页面
             runOnUiThread(() -> {
                 isDbUpdateCompleted = true;
-                shouldShowDbUpdate = false;
+                isWaitingForDbUpdate = false;
                 // 标记数据库已更新
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
                 prefs.edit().putBoolean(KEY_DB_UPDATED, true).apply();
                 
                 Toast.makeText(MainActivity.this, "数据库更新完成，正在进入登录页面...", Toast.LENGTH_SHORT).show();
-                webView.loadUrl(SERVER_URL);
+                loadLoginPageWithRetry();
             });
         }
         
@@ -226,5 +233,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void loadDbUpdatePage() {
+    private void loadDbUpdatePageWithRetry() {
         webView.loadUrl(DB_UPDATE_URL);
+    }
+
+    private void loadLoginPageWithRetry() {
+        webView.loadUrl(SERVER_URL);
+    }
+
+    private void showLoadingState(String message) {
+        loadingContainer.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.VISIBLE);
+        statusText.setText(message);
+        statusText.setVisibility(View.VISIBLE);
+        retryButton.setVisibility(View.GONE);
+        updateDbButton.setVisibility(View.GONE);
+        webView.setVisibility(View.GONE); 
+    }
+
+    private void showErrorState(String message) {
+        loadingContainer.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+        statusText.setText(message);
+        statusText.setVisibility(View.VISIBLE);
+        retryButton.setVisibility(View.VISIBLE);
+        updateDbButton.setVisibility(View.VISIBLE);
+        webView.setVisibility(View.GONE);
+        if (logoAnimator != null) {
+            logoAnimator.cancel();
+            logoImage.setAlpha(1f); // 恢复完全不透明
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}
